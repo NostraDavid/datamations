@@ -1,17 +1,16 @@
 # Copyright (c) Microsoft Corporation
-#
+from pytest import CaptureFixture
+from datamations import DatamationFrame
 
-from datamations import small_salary
 
-def test_small_salary(capsys):
-    df = small_salary().df
-    print(df.groupby('Work').mean(numeric_only=True))
-    captured = capsys.readouterr()
+def test_small_salary(capsys: CaptureFixture, small_salary: DatamationFrame):
+    print(small_salary.groupby("Work").mean())
 
-    assert "Work" in captured.out
-    assert "Salary" in captured.out
-    assert "Academia" in captured.out
-    assert "Industry" in captured.out
-    assert "85.012222" in captured.out
-    assert "91.483761" in captured.out
-    
+    out, _ = capsys.readouterr()
+
+    assert "Work" in out
+    assert "Salary" in out
+    assert "Academia" in out
+    assert "Industry" in out
+    assert "85.012222" in out
+    assert "91.483761" in out

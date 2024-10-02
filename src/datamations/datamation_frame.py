@@ -1,23 +1,21 @@
-# Create a DatamationFrame
-#
-# Create a subclass from a pandas DataFrame.
-#
 import time
 import json
+from typing import Any
 import pandas as pd
 from IPython.display import display, Javascript
+from datamations.types import Spec
+from pandas._typing import Axes, Dtype
 from datamations import datamation_groupby, utils
 
-
-# A class to return the final results
 class Datamation:
-    def __init__(self, states, operations, output):
+    def __init__(self, states, operations, output: str) -> None:
         self.states = states
         self.operations = operations
-        self.output = output
+        self.output: str = output
 
-    def __str__(self):
+    def __str__(self) -> Any:
         return self.output.to_json()
+
 
 # The subclass of pandas DataFrame
 class DatamationFrame(pd.DataFrame):
@@ -25,69 +23,84 @@ class DatamationFrame(pd.DataFrame):
     def _constructor(self):
         return DatamationFrame._internal_ctor
 
-    _by = []
-    _states = []
-    _operations = []
+    _by: list[str] = []
+    _states: list["datamation_groupby.DatamationGroupBy"] = []
+    _operations: list[Any] = []
 
     @classmethod
     def _internal_ctor(cls, *args, **kwargs):
         return cls(*args, **kwargs)
 
-    def __init__(self, data, index=None, columns=None, dtype=None, copy=True):
-        super(DatamationFrame, self).__init__(data=data,
-                                      index=index,
-                                      columns=columns,
-                                      dtype=dtype,
-                                      copy=copy)
+    def __init__(
+        self,
+        data=None,
+        index: Axes | None = None,
+        columns: Axes | None = None,
+        dtype: Dtype | None = None,
+        copy: bool | None = True,
+    ):
+        super(DatamationFrame, self).__init__(
+            data=data,
+            index=index,
+            columns=columns,
+            dtype=dtype,
+            copy=copy,
+        )
         self._states = []
         self._states.append(data)
         self._operations = []
 
     @property
-    def states(self):
+    def states(self) -> list["datamation_groupby.DatamationGroupBy"]:
         return self._states
 
     @property
-    def operations(self):
+    def operations(self) -> list[Any]:
         return self._operations
 
     # Override the 'groupby' function
-    def groupby(self, by):
+    def groupby(self, by: str | list[str]) -> "datamation_groupby.DatamationGroupBy":
         self._by = [by] if isinstance(by, str) else by
-        self._operations.append('groupby')
-        df = super(DatamationFrame, self).groupby(by=by, dropna=False)
+        self._operations.append("groupby")
+        # df = super(DatamationFrame, self).groupby(by=by, dropna=False)
         return datamation_groupby.DatamationGroupBy(self, by)
 
     # The second spec in the json to show initial points divided into groups.
-    def prep_specs_group_by(self, width=300, height=300):
-        x_encoding = { 'field': utils.X_FIELD_CHR, 'type':  "quantitative", 'axis': None }
-        y_encoding = { 'field': utils.Y_FIELD_CHR, 'type': "quantitative", 'axis': None }
-
-        tooltip = [{
-            "field": self._by[0],
-            "type": "nominal"
-        }]
-
-        spec_encoding = {
-            'x': x_encoding,
-            'y': y_encoding ,
-            "color": {
-                "field": None,
-                "type": "nominal"
-            },
-            "tooltip": tooltip
+    def prep_specs_group_by(self, width: int = 300, height: int = 300) -> Any:
+        x_encoding: dict[str, Any] = {
+            "field": utils.X_FIELD_CHR,
+            "type": "quantitative",
+            "axis": None,
+        }
+        y_encoding: dict[str, Any] = {
+            "field": utils.Y_FIELD_CHR,
+            "type": "quantitative",
+            "axis": None,
         }
 
-        if any(element in ['count', 'quantile', 'sum', 'min', 'max'] for element in self.operations):
+        tooltip: list[dict[str, Any]] = [{"field": self._by[0], "type": "nominal"}]
+
+        spec_encoding: dict[str, Any] = {
+            "x": x_encoding,
+            "y": y_encoding,
+            "color": {"field": None, "type": "nominal"},
+            "tooltip": tooltip,
+        }
+
+        if any(
+            element in ["count", "quantile", "sum", "min", "max"]
+            for element in self.operations
+        ):
             del spec_encoding["color"]
 
-        facet_encoding = {}
+        facet_encoding: dict[str, Any] = {}
 
         if len(self._by) > 1:
-            facet_encoding["column"] = { "field": self._by[0],
-                                        "type": "ordinal",
-                                        "title": self._by[0]
-                                        }
+            facet_encoding["column"] = {
+                "field": self._by[0],
+                "type": "ordinal",
+                "title": self._by[0],
+            }
 
         # if len(self._by) > 2:
         #     facet_encoding["row"] = { "field": self._by[1],
@@ -95,23 +108,26 @@ class DatamationFrame(pd.DataFrame):
         #                               "title": self._by[1]
         #                               }
 
-        facet_dims = {
+        facet_dims: dict[str, int] = {
             "ncol": 1,
-            "nrow": 1
+            "nrow": 1,
         }
 
-        data = list(map(lambda key: {self._by[0]: key,
-                                    'n': len(self.states[1].groups[key])},
-                                    self.states[1].groups.keys()))
+        data: list[dict[str, Any]] = list(
+            map(
+                lambda key: {self._by[0]: key, "n": len(self.states[1].groups[key])},
+                self.states[1].groups.keys(),
+            )
+        )
 
-        meta = {
-                'parse': "grid",
-                'description': "Group by " + self._by[-1],
-                "splitField": self._by[0],
-                "axes": False
+        meta: dict[str, Any] = {
+            "parse": "grid",
+            "description": "Group by " + self._by[-1],
+            "splitField": self._by[0],
+            "axes": False,
         }
 
-        specs_list = []
+        specs_list: list[Spec] = []
 
         # The case of groupby multiple
         if len(self._by) > 1:
@@ -132,28 +148,28 @@ class DatamationFrame(pd.DataFrame):
             id = 1
             for col in cols:
                 start[col] = id
-                id  = id + count[col]
+                id = id + count[col]
 
-            facet_dims = {
-                "ncol": len(cols),
-                "nrow": 1
-            }
-            data = list(map(lambda col: {self._by[0]: col, 'n': count[col],
-                                        'gemini_ids': list(range(start[col],
-                                        start[col]+count[col], 1))},
-                                        cols))
-            meta = {
-                    'parse': "grid",
-                    'description': "Group by " + self._by[0]
-            }
+            facet_dims = {"ncol": len(cols), "nrow": 1}
+            data = list(
+                map(
+                    lambda col: {
+                        self._by[0]: col,
+                        "n": count[col],
+                        "gemini_ids": list(
+                            range(start[col], start[col] + count[col], 1)
+                        ),
+                    },
+                    cols,
+                )
+            )
+            meta = {"parse": "grid", "description": "Group by " + self._by[0]}
 
-            spec_encoding = {
-                'x': x_encoding,
-                'y': y_encoding,
-                'tooltip': tooltip
-            }
+            spec_encoding = {"x": x_encoding, "y": y_encoding, "tooltip": tooltip}
 
-            spec = utils.generate_vega_specs(data, meta, spec_encoding, facet_encoding, facet_dims)
+            spec = utils.generate_vega_specs(
+                data, meta, spec_encoding, facet_encoding, facet_dims
+            )
             specs_list.append(spec)
 
             cols = []
@@ -172,7 +188,7 @@ class DatamationFrame(pd.DataFrame):
                     rows.append(row)
                 if col not in count:
                     count[col] = 0
-                k = col + "," + row
+                k: str = col + "," + row
                 if k not in count:
                     count[k] = 0
                 count[k] = count[k] + len(self.states[1].groups[key])
@@ -180,84 +196,89 @@ class DatamationFrame(pd.DataFrame):
 
             data = sorted(set(data))
 
-            id = 1
+            id: int = 1
             for key in data:
                 if key not in start:
                     start[key] = id
                 id = id + count[key]
 
-            data = list(map(lambda key:
-                            {self._by[0]: key.split(',')[0],
-                            self._by[1]: key.split(',')[1],
-                            'n': count[key],
-                            'gemini_ids': list(range(start[key], start[key]+count[key], 1))},
-                            data))
+            data = list(
+                map(
+                    lambda key: {
+                        self._by[0]: key.split(",")[0],
+                        self._by[1]: key.split(",")[1],
+                        "n": count[key],
+                        "gemini_ids": list(
+                            range(start[key], start[key] + count[key], 1)
+                        ),
+                    },
+                    data,
+                )
+            )
 
-            facet_dims = {
-                "ncol": len(cols),
-                "nrow": 1
-            }
+            facet_dims = {"ncol": len(cols), "nrow": 1}
             meta = {
-                    'parse': "grid",
-                    'description': "Group by " + ', '.join(self._by[0:2]),
-                    "splitField": self._by[1],
-                    "axes": True
+                "parse": "grid",
+                "description": "Group by " + ", ".join(self._by[0:2]),
+                "splitField": self._by[1],
+                "axes": True,
             }
 
             tooltip = []
             for field in self._by[0:2]:
-                tooltip.append({
-                    "field": field,
-                    "type": "nominal"
-                })
+                tooltip.append({"field": field, "type": "nominal"})
 
             spec_encoding = {
-                'x': x_encoding,
-                'y': y_encoding ,
-                 "color": {
+                "x": x_encoding,
+                "y": y_encoding,
+                "color": {
                     "field": self._by[1],
                     "type": "nominal",
-                    "legend": {
-                        "values": rows
-                    }
+                    "legend": {"values": rows},
                 },
-                "tooltip": tooltip
+                "tooltip": tooltip,
             }
 
             if len(self._by) > 2:
                 meta = {
-                    'parse': "grid",
-                    'description': "Group by " + self._by[0] + ", " + self._by[1],
+                    "parse": "grid",
+                    "description": "Group by " + self._by[0] + ", " + self._by[1],
                 }
 
                 facet_dims = {
-                    'ncol': len(self._by),
-                    'nrow': len(self._by),
+                    "ncol": len(self._by),
+                    "nrow": len(self._by),
                 }
 
                 facet_encoding = {}
-                facet_encoding["column"] = { 'field': self._by[0],
-                                            'type': "ordinal",
-                                            'title': self._by[0] }
-                facet_encoding["row"] = { 'field': self._by[1],
-                                        'type': "ordinal",
-                                        'title': self._by[1] }
-
-                spec_encoding = {
-                    'x': x_encoding,
-                    'y': y_encoding,
-                    'tooltip': tooltip,
+                facet_encoding["column"] = {
+                    "field": self._by[0],
+                    "type": "ordinal",
+                    "title": self._by[0],
+                }
+                facet_encoding["row"] = {
+                    "field": self._by[1],
+                    "type": "ordinal",
+                    "title": self._by[1],
                 }
 
-            spec = utils.generate_vega_specs(data, meta, spec_encoding, facet_encoding, facet_dims)
+                spec_encoding = {
+                    "x": x_encoding,
+                    "y": y_encoding,
+                    "tooltip": tooltip,
+                }
+
+            spec = utils.generate_vega_specs(
+                data, meta, spec_encoding, facet_encoding, facet_dims
+            )
             specs_list.append(spec)
 
             if len(self._by) > 2:
                 meta = {
-                    'parse': "grid",
-                    'description': "Group by " + ', '.join(self._by),
+                    "parse": "grid",
+                    "description": "Group by " + ", ".join(self._by),
                     "splitField": self._by[2],
-                    "axes": True
+                    "axes": True,
                 }
 
                 cols = []
@@ -280,7 +301,9 @@ class DatamationFrame(pd.DataFrame):
                             rows.append(third)
                     if col not in count:
                         count[col] = 0
-                    k = ','.join(map(lambda x: "NA" if pd.isna(x) else str(x), [col, row, third]))
+                    k = ",".join(
+                        map(lambda x: "NA" if pd.isna(x) else str(x), [col, row, third])
+                    )
                     if k not in count:
                         count[k] = 0
                     count[k] = count[k] + len(self.states[1].groups[key])
@@ -292,34 +315,41 @@ class DatamationFrame(pd.DataFrame):
                         start[key] = id
                     id = id + count[key]
 
-                data = list(map(lambda key: {self._by[0]: key.split(',')[0],
-                                            self._by[1]: key.split(',')[1],
-                                            self._by[2]: key.split(',')[2],
-                                            'n': count[key],
-                                            'gemini_ids': start[key] if count[key] == 1 else list(range(start[key], start[key]+count[key], 1))},
-                                            data))
+                data = list(
+                    map(
+                        lambda key: {
+                            self._by[0]: key.split(",")[0],
+                            self._by[1]: key.split(",")[1],
+                            self._by[2]: key.split(",")[2],
+                            "n": count[key],
+                            "gemini_ids": start[key]
+                            if count[key] == 1
+                            else list(range(start[key], start[key] + count[key], 1)),
+                        },
+                        data,
+                    )
+                )
 
                 tooltip = []
                 for field in self._by:
-                    tooltip.append({
-                        "field": field,
-                        "type": "nominal"
-                    })
+                    tooltip.append({"field": field, "type": "nominal"})
 
                 spec_encoding = {
-                    'x': x_encoding,
-                    'y': y_encoding,
-                    'color': {
-                        'field': self._by[2],
-                        'type': "nominal",
-                        'legend': {
-                            'values': rows,
+                    "x": x_encoding,
+                    "y": y_encoding,
+                    "color": {
+                        "field": self._by[2],
+                        "type": "nominal",
+                        "legend": {
+                            "values": rows,
                         },
                     },
-                    'tooltip': tooltip,
+                    "tooltip": tooltip,
                 }
 
-                spec = utils.generate_vega_specs(data, meta, spec_encoding, facet_encoding, facet_dims)
+                spec = utils.generate_vega_specs(
+                    data, meta, spec_encoding, facet_encoding, facet_dims
+                )
                 specs_list.append(spec)
         else:
             cols = []
@@ -336,55 +366,76 @@ class DatamationFrame(pd.DataFrame):
             id = 1
             for col in cols:
                 start[col] = id
-                id  = id + count[col]
+                id = id + count[col]
 
-            data = list(map(lambda key: { self._by[0]: key,
-                                        'n': len(self.states[1].groups[key]),
-                                        'gemini_ids': list(range(start[key], start[key]+count[key], 1))},
-                                        self.states[1].groups.keys()))
+            data = list(
+                map(
+                    lambda key: {
+                        self._by[0]: key,
+                        "n": len(self.states[1].groups[key]),
+                        "gemini_ids": list(
+                            range(start[key], start[key] + count[key], 1)
+                        ),
+                    },
+                    self.states[1].groups.keys(),
+                )
+            )
 
-            spec = utils.generate_vega_specs(data, meta, spec_encoding, facet_encoding, facet_dims)
+            spec = utils.generate_vega_specs(
+                data, meta, spec_encoding, facet_encoding, facet_dims
+            )
             specs_list.append(spec)
 
         return specs_list
 
     # The first spec in the json to layout all the points in one frame.
-    def prep_specs_data(self, width=300, height=300):
-        x_encoding = { 'field': utils.X_FIELD_CHR, 'type':  "quantitative", 'axis': None }
-        y_encoding = { 'field': utils.Y_FIELD_CHR, 'type': "quantitative", 'axis': None }
+    def prep_specs_data(
+        self,
+        width: int = 300,
+        height: int = 300,
+    ) -> list[dict[str, Any]]:
+        x_encoding: dict[str, Any] = {
+            "field": utils.X_FIELD_CHR,
+            "type": "quantitative",
+            "axis": None,
+        }
+        y_encoding: dict[str, Any] = {
+            "field": utils.Y_FIELD_CHR,
+            "type": "quantitative",
+            "axis": None,
+        }
 
-        spec_encoding = { 'x': x_encoding, 'y': y_encoding }
+        spec_encoding: dict[str, dict[str, Any]] = {"x": x_encoding, "y": y_encoding}
 
-        value = {
+        value: dict[str, Any] = {
             "n": len(self.states[0]),
         }
-        value["gemini_ids"] = list(range(1, len(self.states[0])+1, 1))
+        value["gemini_ids"] = list(range(1, len(self.states[0]) + 1, 1))
 
-        data = [value]
+        data: list[dict[str, Any]] = [value]
 
-        meta = {
-            'parse': "grid",
-            'description': "Initial data"
-        }
+        meta: dict[str, str] = {"parse": "grid", "description": "Initial data"}
 
-        specs_list = []
+        specs_list: list[Any] = []
         spec = utils.generate_vega_specs(data, meta, spec_encoding)
 
         specs_list.append(spec)
         return specs_list
 
-    def specs(self):
+    def specs(self) -> Any:
         specs = self.prep_specs_data() + self.prep_specs_group_by()
         return specs + self.states[1].prep_specs_summarize()
 
     def datamation_sanddance(self):
         # Generate a unique id using time in milliseconds
-        app = 'app' + str(int(time.time() * 1000.0))
+        app = "app" + str(int(time.time() * 1000.0))
 
         # Replace all the instances of app id
         # The Vega specs json is passed to the client
         # The chart gets rendered in the jupyter cell.
-        display(Javascript("""
+        display(
+            Javascript(
+                """
             require.config({ 
                 paths: { 
                 d3: 'https://cdn.jsdelivr.net/gh/microsoft/datamations@main/inst/htmlwidgets/d3/d3',
@@ -452,7 +503,10 @@ class DatamationFrame(pd.DataFrame):
                     window.%s = datamations.App("%s", {specs: %s, autoPlay: true});
                 });            
             })(element);
-        """ % (app, app, app, app, app, app, app, app, json.dumps(self.specs()))))
+        """
+                % (app, app, app, app, app, app, app, app, json.dumps(self.specs()))
+            )
+        )
 
         # returns an object with the final output along with the internal states and operations
         return Datamation(self._states, self._operations, self)
