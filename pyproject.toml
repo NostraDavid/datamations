@@ -1,0 +1,52 @@
+[project]
+name = "datamations"
+version = "1.0.0"
+description = "Automatic generation of explanation of plots and tables from analysis code"
+authors = [{ name = "Chinmay Singh", email = "chsingh@microsoft.com" }]
+readme = "README.md"
+# min version 3.10 due to ipython dependency, instead of 3.9 which is the
+# oldest, still-supported Python version.
+requires-python = ">=3.10"
+dependencies = [
+    "ipykernel>=6.29.5",
+    "ipython>=8.27.0",
+    "palmerpenguins>=0.1.4",
+    "pandas>=2.2.3",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+[tool.uv]
+dev-dependencies = [
+    "pip>=24.2",
+    "pytest>=8.3.3",
+    "ruff>=0.6.8",
+    "setuptools>=75.1.0",
+]
+
+# tool settings go down here
+[tool.pytest.ini_options]
+# Set the directory for pytest to look for tests
+testpaths = ["tests"]
+
+# Add any pytest plugins to be used
+addopts = "--strict-markers --disable-warnings"
+
+# Specify markers for pytest
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks integration tests",
+]
+
+# Configure maximum failures allowed
+maxfail = 5
+
+# Set verbose output for pytest
+log_cli = true
+log_cli_level = "INFO"
+
+# Optionally, configure specific pytest settings for pydantic
+filterwarnings = ["ignore::DeprecationWarning"]

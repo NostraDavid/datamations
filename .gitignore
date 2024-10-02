@@ -1,4 +1,30 @@
+# ignore all root items
 /*
 
-!
+# unignore files
+!.gitignore
+!.python-version
+!azure-pipelines.yml
+!DESCRIPTION
+!LICENSE
+!LICENSE.md
+!pyproject.toml
+!README.md
+!SECURITY.md
+!uv.lock
+
+# unignore folders
+!.github/
+!.vscode/
+!data/
+!datamations/
+!inst/
+!dist/
+!man/
+!notebooks/
+!sandbox/
+!src/
+!tests/
+
+# re-ignore (recursively)
 __pycache__/
